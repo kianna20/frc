@@ -144,6 +144,26 @@ public class Robot extends TimedRobot {
 			
 			rightFrontMotor.set(0);
 			rightBackMotor.set(0);
+		
+		//If the duration is in between ___ and ___ seconds, lift basket
+		if (duration > 3 && duration <= 6) {
+			basketMotor.set(-0.55); //lift basket for 3 seconds
+			
+		}
+		
+		else if (duration > 6 && duration <= 8) {
+			basketMotor.set(0.50); //bring down basket for 2 seconds
+			
+		}
+		
+		else {
+			basketMotor.set(0);
+		}
+		
+		
+			
+			
+			
 		}
 	}
 
