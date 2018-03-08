@@ -7,10 +7,11 @@
 
 package org.usfirst.frc.team6977.robot;
 
+import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Spark;
-import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.Ultrasonic;
 
 /**
@@ -33,7 +34,7 @@ public class Robot extends TimedRobot {
 	private final int leftCollectorPort = 4;
 	private final int rightCollectorPort = 5;
 	private final int winchPort = 7;
-	
+    private final int basketPort = 6;	
 	// Joystick threshold
 	private static double threshold = 0.05;
 	
@@ -49,9 +50,15 @@ public class Robot extends TimedRobot {
 	private Spark leftCollectorMotor;
 	private Spark rightCollectorMotor;
 	private Spark winchMotor;
-	
+	private Spark basketMotor;
 	// Miscellaneous Variables
-	private int counter;
+	
+	boolean startTimeToggle;
+	
+	int driveMode = 0;
+	double startTime, currentTime;
+	double duration;
+	double left, right;
 	
 	// Ultrasonic Sensor
 	/*private Ultrasonic myUltrasonic;
@@ -79,6 +86,11 @@ public class Robot extends TimedRobot {
 		leftCollectorMotor = new Spark(leftCollectorPort);
 		rightCollectorMotor = new Spark(rightCollectorPort);
 		winchMotor = new Spark(winchPort);
+		basketMotor = new Spark(basketPort);
+		
+		rightFrontMotor.setInverted(true);
+		rightBackMotor.setInverted(true);
+	
 	}
 
 	/**
@@ -94,25 +106,45 @@ public class Robot extends TimedRobot {
 	 */
 	@Override
 	public void autonomousInit() {
-		counter = 0;
+		//leftFrontMotor.set(0.5);
+		//lightFrontMotor.set(0.5);
+		//Timer.delay(3);
+		//leftFrontMotor.set(0);
+		//rightFrontMotor.set(0);
+		startTimeToggle = true;
 	}
 	/**
 	 * This function is called periodically during autonomous.
 	 */
 	@Override
 	public void autonomousPeriodic() {
-		try {
-			Thread.sleep(1);
-		} catch (InterruptedException e) {}
-
-		 //This counter will count the elapsed time in milliseconds during autonomous mode
-		counter++;
 		
-		/* 
-		Example of using Ultrasonic sensor
-	    if (myUltrasonic.getRangeInches() < 4.00) {
-		    // Do something
-		}*/
+		if (startTimeToggle) {
+			startTime = System.currentTimeMillis();
+			startTimeToggle = false;
+		}
+		else {
+			currentTime = System.currentTimeMillis();
+		}
+		
+		duration = (currentTime - startTime) / 1000; //gives the seconds
+		
+		//if the duration is smaller than ___ seconds, run motors
+		if (duration <= 3) {
+			leftFrontMotor.set(0.5); //sets it to half speed
+			leftBackMotor.set(0.5);
+			
+			rightFrontMotor.set(0.5);
+			rightBackMotor.set(0.5);
+		}
+		
+		else {
+			leftFrontMotor.set(0); //stops motors
+			leftBackMotor.set(0);
+			
+			rightFrontMotor.set(0);
+			rightBackMotor.set(0);
+		}
 	}
 
 	/**
@@ -120,37 +152,35 @@ public class Robot extends TimedRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		/*if (Math.abs(driveJoystick.getY()) > threshold || Math.abs(driveJoystick.getX()) > threshold) {
-			// Arcade Drive
-			leftFrontMotor.setSpeed(-driveJoystick.getY() + driveJoystick.getX());
-			leftBackMotor.setSpeed(-driveJoystick.getY() + driveJoystick.getX());
-			rightFrontMotor.setSpeed(driveJoystick.getY() + driveJoystick.getX());
-			rightBackMotor.setSpeed(driveJoystick.getY() + driveJoystick.getX());
-		}*/
 		
 		// Tank Drive
-		double leftAxisY = driveJoystick.getRawAxis(1);
-		double rightAxisY = driveJoystick.getRawAxis(5);
+		left = -driveJoystick.getRawAxis(5) + driveJoystick.getRawAxis(0);
+		right = -driveJoystick.getRawAxis(5) - driveJoystick.getRawAxis(0);
 		
-		// Left motors
-		if (Math.abs(leftAxisY) > threshold) {
-			leftFrontMotor.setSpeed(-leftAxisY);
-			leftBackMotor.setSpeed(-leftAxisY);
+		//left = left * left * left;
+		//right = right * right * right;
+		
+		if (driveJoystick.getRawButton(5)) { //L1
+			driveMode = 1;
 		}
-		else {
-			leftFrontMotor.setSpeed(0);
-			leftBackMotor.setSpeed(0);
+		else if (driveJoystick.getRawButton(6)) {
+			driveMode = 0;
 		}
 		
-		// Right motors
-		if (Math.abs(rightAxisY) > threshold) {
-			rightFrontMotor.setSpeed(rightAxisY);
-			rightBackMotor.setSpeed(rightAxisY);
+		if (driveMode == 1) {
+			leftFrontMotor.set(left);
+			leftBackMotor.set(left);
+			rightFrontMotor.set(right);
+			rightBackMotor.set(right);
 		}
-		else {
-			rightFrontMotor.setSpeed(0);
-			rightBackMotor.setSpeed(0);
+		
+		else if (driveMode == 0) {
+			leftFrontMotor.set(left * 0.7);
+			leftBackMotor.set(left * 0.7);
+			rightFrontMotor.set(right * 0.7);
+			rightBackMotor.set(right * 0.7);
 		}
+		
 		
 		if (mechanismJoystick.getRawButton(5)) {
 			// Winch Up
@@ -179,6 +209,20 @@ public class Robot extends TimedRobot {
 			// Collector Idle
 			leftCollectorMotor.setSpeed(0);
 			rightCollectorMotor.setSpeed(0);
+		}
+		if (mechanismJoystick.getRawButton(3)) {
+			//basket down
+			basketMotor.setSpeed (0.50);
+			
+		}
+		else if(mechanismJoystick.getRawButton(6)) {
+			//basket up
+			basketMotor.setSpeed(-0.55);
+		}
+		
+		else {
+			//basket Idle
+			basketMotor.setSpeed(0);
 		}
 		
 		/* 
